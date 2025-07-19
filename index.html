@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Analyzer</title>
+    <style>
+        :root {
+            --bg-color: black;
+            --text-color: white;
+            --outline-color: white;
+            --button-bg-color: #2a2a2a;
+            --button-text-color: white;
+            --info-bg-color: #222;
+            --font-family: monospace;
+            --font-size-ui: 16px;
+            --font-size-textarea: 16px;
+            --font-size-info: 16px;
+            --border-radius-main: 5px;
+            --border-radius-settings: 5px;
+            --border-radius-buttons: 10px;
+            --settings-panel-opacity: 0.95;
+            --settings-bg-color: #2a2a2a;
+            --slider-track-color: #555;
+            --slider-thumb-color: white;
+            --header-controls-height-fs: 70px;
+            --table-border-color: #444;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-family);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+            font-size: var(--font-size-ui);
+            overflow-y: auto;
+            touch-action: pan-y;
+        }
+
+        .header-controls {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-top: 10px;
+            position: relative;
+            z-index: 900;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .font-size-slider-container {
+            display: flex;
+            align-items: center;
+            border: 0.1px solid var(--button-outline-color);
+            border-radius: var(--border-radius-buttons);
+            padding: 5px 10px;
+            background-color: var(--button-bg-color);
+            color: var(--button-text-color);
+            font-size: 14px;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 4px;
+            background: var(--slider-track-color);
+            border-radius: 2px;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity .2s;
+            margin: 0 5px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: var(--slider-thumb-color);
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: var(--slider-thumb-color);
+            cursor: pointer;
+        }
+
+        .font-size-slider-container input[type="range"] {
+            width: 100px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .textarea-section {
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 10px;
+            background-color: transparent;
+            color: var(--text-color);
+            border: 1px solid var(--outline-color);
+            border-radius: var(--border-radius-main);
+            font-family: var(--font-family);
+            font-size: var(--font-size-textarea);
+            box-sizing: border-box;
+            resize: vertical;
+            overflow: auto;
+            padding-bottom: 50px;
+        }
+
+        .button-container {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+        }
+
+        button {
+            padding: 8px 15px;
+            background-color: var(--button-bg-color);
+            color: var(--button-text-color);
+            border: 1px solid var(--button-outline-color);
+            border-radius: var(--border-radius-buttons);
+            cursor: pointer;
+            font-family: var(--font-family);
+            font-size: var(--font-size-ui);
+            white-space: nowrap;
+        }
+
+        button:hover {
+            opacity: 0.8;
+        }
+
+        .info-section {
+            width: 100%;
+            background-color: var(--info-bg-color);
+            border: 1px solid var(--outline-color);
+            border-radius: var(--border-radius-main);
+            padding: 15px;
+            box-sizing: border-box;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            display: none;
+            font-size: var(--font-size-info);
+            line-height: var(--info-line-spacing, 1.5);
+            letter-spacing: var(--info-text-spacing, 0);
+        }
+
+        .info-section > div {
+            border: 1px solid var(--outline-color);
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+
+        .info-section h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid var(--outline-color);
+        }
+
+        .info-section ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 5px 10px;
+        }
+
+        .info-section ul li {
+            padding: 2px 0;
+        }
+
+        .info-section table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            border: 1px solid var(--table-border-color);
+        }
+
+        .info-section th {
+            text-align: left;
+            padding: 8px;
+            background-color: rgba(0,0,0,0.2);
+            border: 1px solid var(--table-border-color);
+        }
+
+        .info-section td {
+            padding: 8px;
+            border: 1px solid var(--table-border-color);
+        }
+
+        .info-section tr:nth-child(even) {
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        .settings-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .settings-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 300px;
+            height: 100%;
+            background-color: var(--settings-bg-color);
+            border-left: 1px solid var(--outline-color);
+            box-shadow: -2px 0 5px rgba(0,0,0,0.5);
+            transform: translateX(100%);
+            transition: transform 0.3s ease-in-out;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            z-index: 999;
+            border-radius: var(--border-radius-settings);
+            opacity: var(--settings-panel-opacity);
+            touch-action: none;
+        }
+
+        .settings-panel.open {
+            transform: translateX(0);
+        }
+
+        .settings-panel h3 {
+            margin-top: 0;
+            border-bottom: 1px solid var(--outline-color);
+            padding-bottom: 10px;
+        }
+
+        .settings-panel > div {
+            border: 1px solid var(--outline-color);
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+
+        .setting-item {
+            margin-bottom: 15px;
+        }
+
+        .setting-item label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .setting-item input[type="color"],
+        .setting-item input[type="text"],
+        .setting-item input[type="number"],
+        .setting-item select {
+            background-color: var(--settings-bg);
+            border: 1px solid var(--settings-outline);
+            color: var(--text-color);
+            padding: 1px;
+            margin-bottom: 5px;
+            width: calc(100% - 12px);
+        }
+
+        body.fullscreen {
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        body.fullscreen .header-controls {
+            position: relative;
+            width: 100vw;
+            max-width: 100vw;
+            background-color: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            margin-bottom: 0;
+            box-sizing: border-box;
+            z-index: 1001;
+            display: flex;
+            justify-content: space-between;
+            transition: opacity 0.3s ease-in-out;
+            opacity: 1;
+            flex-shrink: 0;
+        }
+        
+        body.fullscreen .header-controls.ui-hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        body.fullscreen .header-controls.ui-hidden #hideControlsButton {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            pointer-events: auto;
+            background-color: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: rgba(255,255,255,0.5);
+        }
+
+        body.fullscreen .header-controls.ui-hidden:hover #hideControlsButton {
+            opacity: 1;
+            background-color: rgba(0,0,0,0.7);
+            border: 1px solid white;
+            color: white;
+        }
+
+        body.fullscreen .textarea-section {
+            flex-grow: 1;
+            height: calc(100vh - var(--header-controls-height-fs));
+            min-height: 0;
+            width: 100vw;
+        }
+
+        body.fullscreen textarea {
+            width: 100%;
+            height: 100%;
+            min-height: 100%;
+            max-height: 100%;
+            padding: 20px;
+            border-radius: 0;
+            resize: none;
+            box-sizing: border-box;
+        }
+
+        body.fullscreen .info-section {
+            display: none;
+        }
+
+        body.fullscreen .settings-button {
+            display: none;
+        }
+
+        body.fullscreen .button-container {
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .settings-button {
+                top: 10px;
+                right: 10px;
+            }
+            .settings-panel {
+                width: 100%;
+                border-left: none;
+                border-top: 1px solid var(--outline-color);
+            }
+            .settings-group .setting-item {
+                flex: 1 1 100%;
+            }
+            .info-section ul {
+                grid-template-columns: 1fr;
+            }
+            .header-controls {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .font-size-slider-container {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .font-size-slider-container input[type="range"] {
+                width: calc(100% - 70px);
+            }
+            body.fullscreen .header-controls {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header-controls" id="headerControls">
+        <div class="header-left">
+            <div class="font-size-slider-container">
+                <input type="range" id="textAreaFontSizeExternal" min="10" max="24" value="16">
+                <span class="slider-value" id="textAreaFontSizeExternalValue">16</span>px
+            </div>
+            <button id="exitFullscreenButton" class="fullscreen-controls" style="display: none;">Exit</button>
+            <button id="hideControlsButton" class="fullscreen-controls" style="display: none;">Hide</button>
+        </div>
+        <button class="settings-button" onclick="toggleSettings()">Settings</button>
+    </div>
+
+    <div class="container">
+        <div class="textarea-section">
+            <textarea id="textInput" placeholder="Enter your text here..."></textarea>
+            <div class="button-container">
+                <button id="fullscreenButton">⛶</button>
+                <button id="processButton">Enter</button>
+            </div>
+        </div>
+
+        <div id="infoSummary" class="info-section"></div>
+    </div>
+
+    <div id="settingsPanel" class="settings-panel">
+        <button class="close-settings" onclick="toggleSettings()">X</button>
+        <h3>Settings</h3>
+
+        <div>
+            <h4>General</h4>
+            <div class="setting-item">
+                <label for="fontStyle">Font Style:</label>
+                <select id="fontStyle">
+                    <option value="monospace">Monospace</option>
+                    <option value="sans-serif">Sans-serif</option>
+                    <option value="serif">Serif</option>
+                    <option value="Courier New, Courier, monospace">Courier New</option>
+                    <option value="Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif">Impact</option>
+                    <option value="Georgia, serif">Georgia</option>
+                    <option value="Palatino Linotype, 'Book Antiqua', Palatino, serif">Palatino Linotype</option>
+                    <option value="Arial, sans-serif">Arial</option>
+                    <option value="Verdana, sans-serif">Verdana</option>
+                    <option value="Tahoma, sans-serif">Tahoma</option>
+                </select>
+            </div>
+        </div>
+
+        <div>
+            <h4>Font Sizes</h4>
+            <div class="setting-item">
+                <label for="uiFontSize">UI Font Size:</label>
+                <input type="range" id="uiFontSize" min="10" max="24" value="16">
+                <span class="slider-value" id="uiFontSizeValue">16</span>px
+            </div>
+            <div class="setting-item">
+                <label for="textareaFontSize">Textarea Font Size (Internal):</label>
+                <input type="range" id="textareaFontSize" min="10" max="24" value="16">
+                <span class="slider-value" id="textareaFontSizeValue">16</span>px
+            </div>
+            <div class="setting-item">
+                <label for="infoFontSize">Info Font Size:</label>
+                <input type="range" id="infoFontSize" min="10" max="24" value="16">
+                <span class="slider-value" id="infoFontSizeValue">16</span>px
+            </div>
+        </div>
+
+        <div>
+            <h4>Colors</h4>
+            <div class="settings-group">
+                <div class="setting-item">
+                    <label for="fontColor">Font Color:</label>
+                    <input type="color" id="fontColor" value="#FFFFFF">
+                </div>
+                <div class="setting-item">
+                    <label for="bgColor">Background Color:</label>
+                    <input type="color" id="bgColor" value="#000000">
+                </div>
+                <div class="setting-item">
+                    <label for="outlineColor">Outline Color:</label>
+                    <input type="color" id="outlineColor" value="#FFFFFF">
+                </div>
+                <div class="setting-item">
+                    <label for="buttonOutlineColor">Button Outline Color:</label>
+                    <input type="color" id="buttonOutlineColor" value="#FFFFFF">
+                </div>
+                <div class="setting-item">
+                    <label for="buttonBgColor">Button Background Color:</label>
+                    <input type="color" id="buttonBgColor" value="#2a2a2a">
+                </div>
+                <div class="setting-item">
+                    <label for="infoBgColor">Info Summary Background Color:</label>
+                    <input type="color" id="infoBgColor" value="#222222">
+                </div>
+                <div class="setting-item">
+                    <label for="settingsBgColor">Settings Panel Background:</label>
+                    <input type="color" id="settingsBgColor" value="#2a2a2a">
+                </div>
+                <div class="setting-item">
+                    <label for="sliderTrackColor">Slider Track Color:</label>
+                    <input type="color" id="sliderTrackColor" value="#555555">
+                </div>
+                <div class="setting-item">
+                    <label for="sliderThumbColor">Slider Button Color:</label>
+                    <input type="color" id="sliderThumbColor" value="#FFFFFF">
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <h4>Textarea Specific</h4>
+            <div class="settings-group">
+                <div class="setting-item">
+                    <label for="textareaOutlineColor">Outline Color:</label>
+                    <input type="color" id="textareaOutlineColor" value="#FFFFFF">
+                </div>
+                <div class="setting-item">
+                    <label for="textareaBgColor">Background Color:</label>
+                    <input type="color" id="textareaBgColor" value="#000000">
+                </div>
+                <div class="setting-item">
+                    <label for="textareaFontColor">Font Color:</label>
+                    <input type="color" id="textareaFontColor" value="#FFFFFF">
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <h4>Info Area Specific</h4>
+            <div class="settings-group">
+                <div class="setting-item">
+                    <label for="infoOutlineColor">Outline Color:</label>
+                    <input type="color" id="infoOutlineColor" value="#FFFFFF">
+                </div>
+                <div class="setting-item">
+                    <label for="infoAreaTextSpacing">Text Spacing:</label>
+                    <input type="range" id="infoAreaTextSpacing" min="0" max="5" step="0.1" value="0">
+                    <span class="slider-value" id="infoAreaTextSpacingValue">0</span>px
+                </div>
+                <div class="setting-item">
+                    <label for="infoAreaLineSpacing">Line Spacing:</label>
+                    <input type="range" id="infoAreaLineSpacing" min="1" max="2.5" step="0.1" value="1.5">
+                    <span class="slider-value" id="infoAreaLineSpacingValue">1.5</span>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <h4>Border Radii</h4>
+            <div class="settings-group">
+                <div class="setting-item">
+                    <label for="mainBorderRadius">Textarea/Info:</label>
+                    <input type="number" id="mainBorderRadius" min="0" max="20" value="5">px
+                </div>
+                <div class="setting-item">
+                    <label for="settingsBorderRadius">Settings Panel:</label>
+                    <input type="number" id="settingsBorderRadius" min="0" max="20" value="5">px
+                </div>
+                <div class="setting-item">
+                    <label for="buttonBorderRadius">Buttons:</label>
+                    <input type="number" id="buttonBorderRadius" min="0" max="20" value="10">px
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <h4>Transparency</h4>
+            <div class="setting-item">
+                <label for="settingsPanelTransparency">Settings Panel:</label>
+                <input type="range" id="settingsPanelTransparency" min="0" max="1" step="0.05" value="0.95">
+                <span class="slider-value" id="settingsPanelTransparencyValue">0.95</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const textInput = document.getElementById('textInput');
+        const processButton = document.getElementById('processButton');
+        const infoSummary = document.getElementById('infoSummary');
+        const settingsPanel = document.getElementById('settingsPanel');
+        const fullscreenButton = document.getElementById('fullscreenButton');
+        const exitFullscreenButton = document.getElementById('exitFullscreenButton');
+        const hideControlsButton = document.getElementById('hideControlsButton');
+        const headerControls = document.getElementById('headerControls');
+        const body = document.body;
+
+        const fontStyle = document.getElementById('fontStyle');
+        const uiFontSize = document.getElementById('uiFontSize');
+        const uiFontSizeValue = document.getElementById('uiFontSizeValue');
+        const textareaFontSize = document.getElementById('textareaFontSize');
+        const textareaFontSizeValue = document.getElementById('textareaFontSizeValue');
+        const textAreaFontSizeExternal = document.getElementById('textAreaFontSizeExternal');
+        const textAreaFontSizeExternalValue = document.getElementById('textAreaFontSizeExternalValue');
+        const fontColor = document.getElementById('fontColor');
+        const bgColor = document.getElementById('bgColor');
+        const outlineColor = document.getElementById('outlineColor');
+        const buttonOutlineColor = document.getElementById('buttonOutlineColor');
+        const buttonBgColor = document.getElementById('buttonBgColor');
+        const infoBgColor = document.getElementById('infoBgColor');
+        const settingsBgColor = document.getElementById('settingsBgColor');
+        const sliderTrackColor = document.getElementById('sliderTrackColor');
+        const sliderThumbColor = document.getElementById('sliderThumbColor');
+        const textareaOutlineColor = document.getElementById('textareaOutlineColor');
+        const textareaBgColor = document.getElementById('textareaBgColor');
+        const textareaFontColor = document.getElementById('textareaFontColor');
+        const infoOutlineColor = document.getElementById('infoOutlineColor');
+        const infoAreaTextSpacing = document.getElementById('infoAreaTextSpacing');
+        const infoAreaTextSpacingValue = document.getElementById('infoAreaTextSpacingValue');
+        const infoAreaLineSpacing = document.getElementById('infoAreaLineSpacing');
+        const infoAreaLineSpacingValue = document.getElementById('infoAreaLineSpacingValue');
+        const mainBorderRadius = document.getElementById('mainBorderRadius');
+        const settingsBorderRadius = document.getElementById('settingsBorderRadius');
+        const buttonBorderRadius = document.getElementById('buttonBorderRadius');
+        const settingsPanelTransparency = document.getElementById('settingsPanelTransparency');
+        const settingsPanelTransparencyValue = document.getElementById('settingsPanelTransparencyValue');
+
+        function applySettings(settings) {
+            document.documentElement.style.setProperty('--font-family', settings.fontStyle);
+            document.documentElement.style.setProperty('--font-size-ui', `${settings.uiFontSize}px`);
+            document.documentElement.style.setProperty('--font-size-textarea', `${settings.textareaFontSize}px`);
+            document.documentElement.style.setProperty('--font-size-info', `${settings.infoFontSize}px`);
+            document.documentElement.style.setProperty('--text-color', settings.fontColor);
+            document.documentElement.style.setProperty('--bg-color', settings.bgColor);
+            document.documentElement.style.setProperty('--outline-color', settings.outlineColor);
+            document.documentElement.style.setProperty('--button-outline-color', settings.buttonOutlineColor);
+            document.documentElement.style.setProperty('--button-bg-color', settings.buttonBgColor);
+            document.documentElement.style.setProperty('--info-bg-color', settings.infoBgColor);
+            document.documentElement.style.setProperty('--settings-bg-color', settings.settingsBgColor);
+            document.documentElement.style.setProperty('--slider-track-color', settings.sliderTrackColor);
+            document.documentElement.style.setProperty('--slider-thumb-color', settings.sliderThumbColor);
+            document.documentElement.style.setProperty('--textarea-outline-color', settings.textareaOutlineColor);
+            document.documentElement.style.setProperty('--textarea-bg-color', settings.textareaBgColor);
+            document.documentElement.style.setProperty('--textarea-font-color', settings.textareaFontColor);
+            document.documentElement.style.setProperty('--info-outline-color', settings.infoOutlineColor);
+            document.documentElement.style.setProperty('--info-text-spacing', `${settings.infoAreaTextSpacing}px`);
+            document.documentElement.style.setProperty('--info-line-spacing', settings.infoAreaLineSpacing);
+            document.documentElement.style.setProperty('--border-radius-main', `${settings.mainBorderRadius}px`);
+            document.documentElement.style.setProperty('--border-radius-settings', `${settings.settingsBorderRadius}px`);
+            document.documentElement.style.setProperty('--border-radius-buttons', `${settings.buttonBorderRadius}px`);
+            document.documentElement.style.setProperty('--settings-panel-opacity', settings.settingsPanelOpacity);
+            document.documentElement.style.setProperty('--table-border-color', '#444');
+
+            fontStyle.value = settings.fontStyle;
+            uiFontSize.value = settings.uiFontSize;
+            uiFontSizeValue.textContent = settings.uiFontSize;
+            textareaFontSize.value = settings.textareaFontSize;
+            textareaFontSizeValue.textContent = settings.textareaFontSize;
+            textAreaFontSizeExternal.value = settings.textareaFontSize;
+            textAreaFontSizeExternalValue.textContent = settings.textareaFontSize;
+            fontColor.value = settings.fontColor;
+            bgColor.value = settings.bgColor;
+            outlineColor.value = settings.outlineColor;
+            buttonOutlineColor.value = settings.buttonOutlineColor;
+            buttonBgColor.value = settings.buttonBgColor;
+            infoBgColor.value = settings.infoBgColor;
+            settingsBgColor.value = settings.settingsBgColor;
+            sliderTrackColor.value = settings.sliderTrackColor;
+            sliderThumbColor.value = settings.sliderThumbColor;
+            textareaOutlineColor.value = settings.textareaOutlineColor;
+            textareaBgColor.value = settings.textareaBgColor;
+            textareaFontColor.value = settings.textareaFontColor;
+            infoOutlineColor.value = settings.infoOutlineColor;
+            infoAreaTextSpacing.value = settings.infoAreaTextSpacing;
+            infoAreaTextSpacingValue.textContent = settings.infoAreaTextSpacing;
+            infoAreaLineSpacing.value = settings.infoAreaLineSpacing;
+            infoAreaLineSpacingValue.textContent = settings.infoAreaLineSpacing;
+            mainBorderRadius.value = settings.mainBorderRadius;
+            settingsBorderRadius.value = settings.settingsBorderRadius;
+            buttonBorderRadius.value = settings.buttonBorderRadius;
+            settingsPanelTransparency.value = settings.settingsPanelOpacity;
+            settingsPanelTransparencyValue.textContent = settings.settingsPanelOpacity;
+
+            textInput.style.borderColor = settings.textareaOutlineColor;
+            textInput.style.backgroundColor = settings.textareaBgColor;
+            textInput.style.color = settings.textareaFontColor;
+            textInput.style.borderRadius = `${settings.mainBorderRadius}px`;
+
+            infoSummary.style.borderColor = settings.infoOutlineColor;
+            infoSummary.style.backgroundColor = settings.infoBgColor;
+            infoSummary.style.borderRadius = `${settings.mainBorderRadius}px`;
+
+            document.querySelectorAll('button').forEach(btn => {
+                btn.style.borderColor = `var(--button-outline-color)`;
+                btn.style.backgroundColor = `var(--button-bg-color)`;
+                btn.style.color = `var(--button-text-color)`;
+                btn.style.borderRadius = `var(--border-radius-buttons)`;
+            });
+
+            settingsPanel.style.borderRadius = `${settings.settingsBorderRadius}px`;
+            settingsPanel.style.opacity = settings.settingsPanelOpacity;
+
+            const externalSliderContainer = document.querySelector('.font-size-slider-container');
+            if (externalSliderContainer) {
+                externalSliderContainer.style.borderColor = `var(--button-outline-color)`;
+                externalSliderContainer.style.borderRadius = `var(--border-radius-buttons)`;
+                externalSliderContainer.style.backgroundColor = `var(--button-bg-color)`;
+                externalSliderContainer.style.color = `var(--button-text-color)`;
+            }
+
+            requestAnimationFrame(() => {
+                const headerHeight = headerControls.offsetHeight;
+                document.documentElement.style.setProperty('--header-controls-height-fs', `${headerHeight + 20}px`);
+            });
+        }
+
+        function loadSettings() {
+            const savedSettings = localStorage.getItem('textAnalyzerSettings');
+            return savedSettings ? JSON.parse(savedSettings) : {
+                fontStyle: 'monospace',
+                uiFontSize: 16,
+                textareaFontSize: 16,
+                infoFontSize: 16,
+                fontColor: '#FFFFFF',
+                bgColor: '#000000',
+                outlineColor: '#FFFFFF',
+                buttonOutlineColor: '#FFFFFF',
+                buttonBgColor: '#2a2a2a',
+                infoBgColor: '#222222',
+                settingsBgColor: '#2a2a2a',
+                sliderTrackColor: '#555555',
+                sliderThumbColor: '#FFFFFF',
+                textareaOutlineColor: '#FFFFFF',
+                textareaBgColor: '#000000',
+                textareaFontColor: '#FFFFFF',
+                infoOutlineColor: '#FFFFFF',
+                infoAreaTextSpacing: 0,
+                infoAreaLineSpacing: 1.5,
+                mainBorderRadius: 5,
+                settingsBorderRadius: 5,
+                buttonBorderRadius: 10,
+                settingsPanelOpacity: 0.95,
+            };
+        }
+
+        function saveSettings() {
+            const settings = {
+                fontStyle: fontStyle.value,
+                uiFontSize: parseInt(uiFontSize.value),
+                textareaFontSize: parseInt(textareaFontSize.value),
+                infoFontSize: parseInt(infoFontSize.value),
+                fontColor: fontColor.value,
+                bgColor: bgColor.value,
+                outlineColor: outlineColor.value,
+                buttonOutlineColor: buttonOutlineColor.value,
+                buttonBgColor: buttonBgColor.value,
+                infoBgColor: infoBgColor.value,
+                settingsBgColor: settingsBgColor.value,
+                sliderTrackColor: sliderTrackColor.value,
+                sliderThumbColor: sliderThumbColor.value,
+                textareaOutlineColor: textareaOutlineColor.value,
+                textareaBgColor: textareaBgColor.value,
+                textareaFontColor: textareaFontColor.value,
+                infoOutlineColor: infoOutlineColor.value,
+                infoAreaTextSpacing: parseFloat(infoAreaTextSpacing.value),
+                infoAreaLineSpacing: parseFloat(infoAreaLineSpacing.value),
+                mainBorderRadius: parseInt(mainBorderRadius.value),
+                settingsBorderRadius: parseInt(settingsBorderRadius.value),
+                buttonBorderRadius: parseInt(buttonBorderRadius.value),
+                settingsPanelOpacity: parseFloat(settingsPanelTransparency.value),
+            };
+            localStorage.setItem('textAnalyzerSettings', JSON.stringify(settings));
+            applySettings(settings);
+        }
+
+        function addSettingsListeners() {
+            const settingsInputs = document.querySelectorAll(
+                '#settingsPanel input[type="color"], #settingsPanel input[type="number"], #settingsPanel select'
+            );
+            settingsInputs.forEach(input => {
+                input.addEventListener('input', saveSettings);
+            });
+
+            const rangeSliders = document.querySelectorAll('#settingsPanel input[type="range"]');
+            rangeSliders.forEach(slider => {
+                slider.addEventListener('input', () => {
+                    const valueSpan = document.getElementById(`${slider.id}Value`);
+                    if (valueSpan) {
+                        valueSpan.textContent = slider.value;
+                    }
+                    saveSettings();
+                });
+            });
+
+            textareaFontSize.addEventListener('input', () => {
+                textareaFontSizeValue.textContent = textareaFontSize.value;
+                textAreaFontSizeExternal.value = textareaFontSize.value;
+                textAreaFontSizeExternalValue.textContent = textareaFontSize.value;
+                saveSettings();
+            });
+            textAreaFontSizeExternal.addEventListener('input', () => {
+                textAreaFontSizeExternalValue.textContent = textAreaFontSizeExternal.value;
+                textareaFontSize.value = textAreaFontSizeExternal.value;
+                textareaFontSizeValue.textContent = textAreaFontSizeExternal.value;
+                saveSettings();
+            });
+        }
+
+        function toggleSettings() {
+            settingsPanel.classList.toggle('open');
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                enterFullscreen();
+            } else {
+                exitFullscreen();
+            }
+        }
+
+        function enterFullscreen() {
+            const element = document.documentElement;
+            
+            if (element.requestFullscreen) {
+                element.requestFullscreen();
+            } else if (element.mozRequestFullScreen) {
+                element.mozRequestFullScreen();
+            } else if (element.webkitRequestFullscreen) {
+                element.webkitRequestFullscreen();
+            } else if (element.msRequestFullscreen) {
+                element.msRequestFullscreen();
+            }
+
+            body.classList.add('fullscreen');
+            fullscreenButton.style.display = 'none';
+            processButton.style.display = 'none';
+            document.querySelector('.settings-button').style.display = 'none';
+
+            exitFullscreenButton.style.display = 'inline-block';
+            hideControlsButton.style.display = 'inline-block';
+
+            textInput.dataset.originalHeight = textInput.style.height;
+            textInput.dataset.originalMinHeight = textInput.style.minHeight;
+            textInput.dataset.originalMaxHeight = textInput.style.maxHeight;
+            textInput.dataset.originalPaddingBottom = textInput.style.paddingBottom;
+
+            requestAnimationFrame(() => {
+                const headerHeight = headerControls.offsetHeight;
+                document.documentElement.style.setProperty('--header-controls-height-fs', `${headerHeight + 20}px`);
+            });
+
+            infoSummary.style.display = 'none';
+        }
+
+        function exitFullscreen() {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+
+            body.classList.remove('fullscreen');
+            fullscreenButton.style.display = 'inline-block';
+            processButton.style.display = 'inline-block';
+            document.querySelector('.settings-button').style.display = 'inline-block';
+
+            exitFullscreenButton.style.display = 'none';
+            hideControlsButton.style.display = 'none';
+            headerControls.classList.remove('ui-hidden');
+
+            if (textInput.dataset.originalHeight) {
+                textInput.style.height = textInput.dataset.originalHeight;
+                textInput.style.minHeight = textInput.dataset.originalMinHeight || '150px';
+                textInput.style.maxHeight = textInput.dataset.originalMaxHeight || 'none';
+                textInput.style.paddingBottom = textInput.dataset.originalPaddingBottom || '50px';
+            }
+
+            if (textInput.value.trim()) {
+                infoSummary.style.display = 'block';
+            }
+        }
+
+        function toggleFullscreenControlsVisibility() {
+            headerControls.classList.toggle('ui-hidden');
+            hideControlsButton.textContent = headerControls.classList.contains('ui-hidden') ? 'Show' : 'Hide';
+        }
+
+        function processText() {
+            const text = textInput.value;
+            if (!text.trim()) {
+                infoSummary.style.display = 'none';
+                return;
+            }
+
+            const results = analyzeText(text);
+            displayResults(results);
+            infoSummary.style.display = 'block';
+        }
+
+        function analyzeText(text) {
+            const words = text.match(/[a-zA-Z0-9'’-]+/g) || [];
+            const wordCount = words.length;
+
+            const wordFrequencies = {};
+            words.forEach(word => {
+                const lowerWord = word.toLowerCase();
+                wordFrequencies[lowerWord] = (wordFrequencies[lowerWord] || 0) + 1;
+            });
+            let mostRepeatedWord = '';
+            let maxWordCount = 0;
+            for (const word in wordFrequencies) {
+                if (wordFrequencies[word] > maxWordCount) {
+                    maxWordCount = wordFrequencies[word];
+                    mostRepeatedWord = word;
+                }
+            }
+
+            const totalCharactersWithSpace = text.length;
+            const totalCharactersWithoutSpace = text.replace(/\s/g, '').length;
+
+            const letterFrequencies = {};
+            const lettersOnly = text.replace(/[^a-zA-Z]/g, '').toLowerCase();
+            for (const char of lettersOnly) {
+                letterFrequencies[char] = (letterFrequencies[char] || 0) + 1;
+            }
+            const sortedLetters = Object.entries(letterFrequencies).sort(([, a], [, b]) => b - a);
+
+            let mostUsedLetter = 'N/A';
+            let mostUsedLetterCount = 0;
+            if (sortedLetters.length > 0) {
+                mostUsedLetter = sortedLetters[0][0];
+                mostUsedLetterCount = sortedLetters[0][1];
+            }
+
+            let rarestLetter = 'N/A';
+            let rarestLetterCount = 'N/A';
+            if (sortedLetters.length > 0) {
+                const lowestFreq = sortedLetters[sortedLetters.length - 1][1];
+                const rarestLettersArray = sortedLetters.filter(([, freq]) => freq === lowestFreq);
+                rarestLetter = rarestLettersArray.map(([char]) => char).join(', ');
+                rarestLetterCount = lowestFreq;
+            }
+
+            const symbolFrequencies = {};
+            const symbolsOnly = text.replace(/[a-zA-Z0-9\s]/g, '');
+            for (const char of symbolsOnly) {
+                symbolFrequencies[char] = (symbolFrequencies[char] || 0) + 1;
+            }
+            const sortedSymbols = Object.entries(symbolFrequencies).sort(([, a], [, b]) => b - a);
+
+            let mostCommonSymbols = 'N/A';
+            let mostCommonSymbolsCount = 0;
+            if (sortedSymbols.length > 0) {
+                mostCommonSymbols = sortedSymbols[0][0];
+                mostCommonSymbolsCount = sortedSymbols[0][1];
+            }
+
+            let uniqueSymbolLowestTime = 'N/A';
+            let uniqueSymbolLowestTimeCount = 'N/A';
+            if (sortedSymbols.length > 0) {
+                const lowestSymbolFreq = sortedSymbols[sortedSymbols.length - 1][1];
+                const lowestSymbolsArray = sortedSymbols.filter(([, freq]) => freq === lowestSymbolFreq);
+                uniqueSymbolLowestTime = lowestSymbolsArray.map(([symbol]) => symbol).join(', ');
+                uniqueSymbolLowestTimeCount = lowestSymbolFreq;
+            }
+
+            const capitalizedLetterFrequencies = {};
+            const capitalizedLettersOnly = text.replace(/[^A-Z]/g, '');
+            for (const char of capitalizedLettersOnly) {
+                capitalizedLetterFrequencies[char] = (capitalizedLetterFrequencies[char] || 0) + 1;
+            }
+            let mostCapitalizedLetter = 'N/A';
+            let mostCapitalizedLetterCount = 0;
+            let maxCapitalizedCount = 0;
+            for (const char in capitalizedLetterFrequencies) {
+                if (capitalizedLetterFrequencies[char] > maxCapitalizedCount) {
+                    maxCapitalizedCount = capitalizedLetterFrequencies[char];
+                    mostCapitalizedLetter = char;
+                    mostCapitalizedLetterCount = maxCapitalizedCount;
+                }
+            }
+
+            const lineCount = text.split('\n').length;
+            const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim() !== '');
+            const paragraphCount = paragraphs.length;
+            const numbersAndCodes = text.match(/\b\d+[a-zA-Z0-9]*\b|\b[a-zA-Z]*\d+\b/g) || [];
+
+            return {
+                wordCount,
+                mostRepeatedWord,
+                maxWordCount,
+                totalCharactersWithSpace,
+                totalCharactersWithoutSpace,
+                mostUsedLetter,
+                mostUsedLetterCount,
+                rarestLetter,
+                rarestLetterCount,
+                uniqueSymbolLowestTime,
+                uniqueSymbolLowestTimeCount,
+                mostCommonSymbols,
+                mostCommonSymbolsCount,
+                mostCapitalizedLetter,
+                mostCapitalizedLetterCount,
+                sortedLetters,
+                sortedSymbols,
+                lineCount,
+                paragraphCount,
+                numbersAndCodes
+            };
+        }
+
+        function displayResults(results) {
+            let html = '<h3>Text Analysis Summary:</h3>';
+
+            html += '<div><h4>General Information</h4>';
+            html += `<p><strong>Word Count:</strong> ${results.wordCount}</p>`;
+            html += `<p><strong>Most Repeated Word:</strong> "${results.mostRepeatedWord}" [${results.maxWordCount}]</p>`;
+            html += `<p><strong>Total Characters (with spaces):</strong> ${results.totalCharactersWithSpace}</p>`;
+            html += `<p><strong>Total Characters (without spaces):</strong> ${results.totalCharactersWithoutSpace}</p>`;
+            html += `<p><strong>Total Lines:</strong> ${results.lineCount}</p>`;
+            html += `<p><strong>Total Paragraphs:</strong> ${results.paragraphCount}</p>`;
+            html += '</div>';
+
+            html += '<div><h4>Letter Analysis</h4>';
+            html += `<p><strong>Most Used Letter:</strong> "${results.mostUsedLetter.toUpperCase()}" [${results.mostUsedLetterCount}]</p>`;
+            html += `<p><strong>Rarest Letter:</strong> "${results.rarestLetter.toUpperCase()}" [${results.rarestLetterCount}]</p>`;
+            html += `<p><strong>Most Capitalized Letter:</strong> "${results.mostCapitalizedLetter}" [${results.mostCapitalizedLetterCount}]</p>`;
+            html += '<p><strong>List of Letters Used:</strong></p>';
+            
+            if (results.sortedLetters.length > 0) {
+                html += '<table>';
+                html += '<tr><th>No.</th><th>Letter</th><th>Freq.</th><th style="width:20px;"></th><th>No.</th><th>Letter</th><th>Freq.</th></tr>';
+                
+                const halfLength = Math.ceil(results.sortedLetters.length / 2);
+                
+                for (let i = 0; i < halfLength; i++) {
+                    html += '<tr>';
+                    
+                    const firstItem = results.sortedLetters[i];
+                    if (firstItem) {
+                        html += `<td>${i + 1}.</td>`;
+                        html += `<td>${firstItem[0].toUpperCase()}</td>`;
+                        html += `<td>${firstItem[1]}</td>`;
+                    } else {
+                        html += '<td></td><td></td><td></td>';
+                    }
+                    
+                    html += '<td></td>';
+                    
+                    const secondItem = results.sortedLetters[i + halfLength];
+                    if (secondItem) {
+                        html += `<td>${i + halfLength + 1}.</td>`;
+                        html += `<td>${secondItem[0].toUpperCase()}</td>`;
+                        html += `<td>${secondItem[1]}</td>`;
+                    } else {
+                        html += '<td></td><td></td><td></td>';
+                    }
+                    
+                    html += '</tr>';
+                }
+                
+                html += '</table>';
+            } else {
+                html += `<p>No letters used.</p>`;
+            }
+            
+            html += '</div>';
+
+            html += '<div><h4>Symbol Analysis</h4>';
+            html += `<p><strong>Most Common Symbol:</strong> "${results.mostCommonSymbols}" [${results.mostCommonSymbolsCount}]</p>`;
+            html += `<p><strong>Unique Symbol Appearing Lowest Times:</strong> "${results.uniqueSymbolLowestTime}" [${results.uniqueSymbolLowestTimeCount}]</p>`;
+            html += '<p><strong>List of Symbols Used:</strong></p><ul>';
+            if (results.sortedSymbols.length > 0) {
+                results.sortedSymbols.forEach(([symbol, count], index) => {
+                    html += `<li>${index + 1}. "${symbol}" [${count}]</li>`;
+                });
+            } else {
+                html += `<li>No symbols used.</li>`;
+            }
+            html += '</ul>';
+            html += '</div>';
+
+            html += '<div><h4>Numbers & Codes</h4>';
+            html += '<p><strong>Detected Numbers and Codes:</strong></p><ul>';
+            if (results.numbersAndCodes.length > 0) {
+                results.numbersAndCodes.forEach(code => {
+                    html += `<li>"${code}"</li>`;
+                });
+            } else {
+                html += `<li>No numbers or codes detected.</li>`;
+            }
+            html += '</ul>';
+            html += '</div>';
+
+            infoSummary.innerHTML = html;
+        }
+
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement && body.classList.contains('fullscreen')) {
+                exitFullscreen();
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (body.classList.contains('fullscreen') && headerControls.classList.contains('ui-hidden')) {
+                headerControls.classList.remove('ui-hidden');
+                hideControlsButton.textContent = 'Hide';
+            }
+        });
+
+        processButton.addEventListener('click', processText);
+        fullscreenButton.addEventListener('click', toggleFullscreen);
+        exitFullscreenButton.addEventListener('click', exitFullscreen);
+        hideControlsButton.addEventListener('click', toggleFullscreenControlsVisibility);
+
+        window.onload = () => {
+            applySettings(loadSettings());
+            addSettingsListeners();
+        };
+    </script>
+</body>
+</html>
