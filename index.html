@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Analyzer  [txtsu] </title>
+    <title>Text Analyzer [txtsu]</title>
     <style>
         :root {
             --bg-color: black;
@@ -15,7 +15,7 @@
             --font-family: monospace;
             --font-size-ui: 16px;
             --font-size-textarea: 16px;
-            --font-size-info: 16px;
+            --font-size-info: 14px;
             --border-radius-main: 5px;
             --border-radius-settings: 5px;
             --border-radius-buttons: 10px;
@@ -41,6 +41,7 @@
             font-size: var(--font-size-ui);
             overflow-y: auto;
             touch-action: pan-y;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .header-controls {
@@ -154,10 +155,18 @@
             font-family: var(--font-family);
             font-size: var(--font-size-ui);
             white-space: nowrap;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            user-select: none;
+            outline: none;
         }
 
         button:hover {
             opacity: 0.8;
+        }
+
+        button:active {
+            transform: scale(0.98);
         }
 
         .info-section {
@@ -187,6 +196,12 @@
             margin-bottom: 10px;
             padding-bottom: 5px;
             border-bottom: 1px solid var(--outline-color);
+        }
+
+        .info-section h4 {
+            display: inline-block;
+            margin-right: 10px;
+            margin-bottom: 10px;
         }
 
         .info-section ul {
@@ -249,7 +264,6 @@
             z-index: 999;
             border-radius: var(--border-radius-settings);
             opacity: var(--settings-panel-opacity);
-            touch-action: none;
         }
 
         .settings-panel.open {
@@ -582,6 +596,10 @@
         </div>
     </div>
 
+    <footer style="text-align: center; margin-top: 20px; color: #555; padding: 10px;">
+        <a href="https://xetsue.github.io/" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;">By Tsu.</a>
+    </footer>
+
     <script>
         const textInput = document.getElementById('textInput');
         const processButton = document.getElementById('processButton');
@@ -622,6 +640,10 @@
         const buttonBorderRadius = document.getElementById('buttonBorderRadius');
         const settingsPanelTransparency = document.getElementById('settingsPanelTransparency');
         const settingsPanelTransparencyValue = document.getElementById('settingsPanelTransparencyValue');
+
+        let currentLetterSort = 'alpha';
+        let currentWordSort = 'alpha';
+        let analyzedData = null;
 
         function applySettings(settings) {
             document.documentElement.style.setProperty('--font-family', settings.fontStyle);
@@ -887,6 +909,116 @@
             hideControlsButton.textContent = headerControls.classList.contains('ui-hidden') ? 'Show' : 'Hide';
         }
 
+        function updateLetterSort() {
+            const sortButton = document.getElementById('letterSortButton');
+            if (!sortButton || !analyzedData) return;
+            
+            let sortedLetters = [...analyzedData.sortedLetters];
+            
+            switch (currentLetterSort) {
+                case 'alpha':
+                    sortButton.textContent = 'ASC';
+                    sortedLetters.sort((a, b) => a[1] - b[1]); 
+                    currentLetterSort = 'asc';
+                    break;
+                case 'asc':
+                    sortButton.textContent = 'DSC';
+                    sortedLetters.sort((a, b) => b[1] - a[1]);
+                    currentLetterSort = 'desc';
+                    break;
+                case 'desc':
+                    sortButton.textContent = 'ALP';
+                    sortedLetters.sort((a, b) => a[0].localeCompare(b[0]));
+                    currentLetterSort = 'alpha';
+                    break;
+            }
+            
+            updateLetterTable(sortedLetters);
+        }
+
+        function updateLetterTable(sortedLetters) {
+            let html = '<table>';
+            html += '<tr><th>No.</th><th>Letter</th><th>Freq.</th><th style="width:20px;"></th><th>No.</th><th>Letter</th><th>Freq.</th></tr>';
+            
+            const halfLength = Math.ceil(sortedLetters.length / 2);
+            
+            for (let i = 0; i < halfLength; i++) {
+                html += '<tr>';
+                
+                const firstItem = sortedLetters[i];
+                if (firstItem) {
+                    html += `<td>${i + 1}.</td>`;
+                    html += `<td>${firstItem[0].toUpperCase()}</td>`;
+                    html += `<td>${firstItem[1]}</td>`;
+                } else {
+                    html += '<td></td><td></td><td></td>';
+                }
+                
+                html += '<td></td>';
+                
+                const secondItem = sortedLetters[i + halfLength];
+                if (secondItem) {
+                    html += `<td>${i + halfLength + 1}.</td>`;
+                    html += `<td>${secondItem[0].toUpperCase()}</td>`;
+                    html += `<td>${secondItem[1]}</td>`;
+                } else {
+                    html += '<td></td><td></td><td></td>';
+                }
+                
+                html += '</tr>';
+            }
+            
+            html += '</table>';
+            
+            const letterTableContainer = document.getElementById('letterTableContainer');
+            if (letterTableContainer) {
+                letterTableContainer.innerHTML = html;
+            }
+        }
+
+        function updateWordSort() {
+            const sortButton = document.getElementById('wordSortButton');
+            if (!sortButton || !analyzedData) return;
+
+            let wordsArray = Object.entries(analyzedData.wordFrequencies);
+
+            switch (currentWordSort) {
+                case 'alpha':
+                    sortButton.textContent = 'ASC';
+                    wordsArray.sort((a, b) => a[1] - b[1]);
+                    currentWordSort = 'asc';
+                    break;
+                case 'asc':
+                    sortButton.textContent = 'DSC';
+                    wordsArray.sort((a, b) => b[1] - a[1]);
+                    currentWordSort = 'desc';
+                    break;
+                case 'desc':
+                    sortButton.textContent = 'ALP';
+                    wordsArray.sort((a, b) => a[0].localeCompare(b[0]));
+                    currentWordSort = 'alpha';
+                    break;
+            }
+            updateWordList(wordsArray);
+        }
+
+        function updateWordList(sortedWords) {
+            let html = '<ul>';
+            if (sortedWords.length > 0) {
+                sortedWords.forEach((wordEntry, index) => {
+                    html += `<li>${index + 1}. ${wordEntry[0].charAt(0).toUpperCase() + wordEntry[0].slice(1)} [${wordEntry[1]}]</li>`;
+                });
+            } else {
+                html += '<li>No words found</li>';
+            }
+            html += '</ul>';
+
+            const wordListContainer = document.getElementById('wordListContainer');
+            if (wordListContainer) {
+                wordListContainer.innerHTML = html;
+            }
+        }
+
         function processText() {
             const text = textInput.value;
             if (!text.trim()) {
@@ -894,28 +1026,31 @@
                 return;
             }
 
-            const results = analyzeText(text);
-            displayResults(results);
+            analyzedData = analyzeText(text);
+            displayResults(analyzedData);
             infoSummary.style.display = 'block';
         }
 
         function analyzeText(text) {
-            const words = text.match(/[a-zA-Z0-9'’-]+/g) || [];
-            const wordCount = words.length;
-
+            const words = text.match(/[a-zA-Z0-9'’-]+|[0-9]+|[^\s\w]/g) || [];
+            
             const wordFrequencies = {};
-            words.forEach(word => {
-                const lowerWord = word.toLowerCase();
-                wordFrequencies[lowerWord] = (wordFrequencies[lowerWord] || 0) + 1;
-            });
+            let wordCount = 0;
             let mostRepeatedWord = '';
             let maxWordCount = 0;
-            for (const word in wordFrequencies) {
-                if (wordFrequencies[word] > maxWordCount) {
-                    maxWordCount = wordFrequencies[word];
-                    mostRepeatedWord = word;
+
+            words.forEach(word => {
+                const lowerWord = word.toLowerCase();
+                if (/[a-zA-Z]/.test(lowerWord) || /^\d+$/.test(lowerWord)) {
+                    wordCount++;
+                    wordFrequencies[lowerWord] = (wordFrequencies[lowerWord] || 0) + 1;
+                    
+                    if (/[a-zA-Z]/.test(lowerWord) && wordFrequencies[lowerWord] > maxWordCount) {
+                        maxWordCount = wordFrequencies[lowerWord];
+                        mostRepeatedWord = lowerWord;
+                    }
                 }
-            }
+            });
 
             const totalCharactersWithSpace = text.length;
             const totalCharactersWithoutSpace = text.replace(/\s/g, '').length;
@@ -925,19 +1060,26 @@
             for (const char of lettersOnly) {
                 letterFrequencies[char] = (letterFrequencies[char] || 0) + 1;
             }
-            const sortedLetters = Object.entries(letterFrequencies).sort(([, a], [, b]) => b - a);
+            const sortedLetters = Object.entries(letterFrequencies).sort(([a], [b]) => a.localeCompare(b));
 
             let mostUsedLetter = 'N/A';
             let mostUsedLetterCount = 0;
             if (sortedLetters.length > 0) {
                 mostUsedLetter = sortedLetters[0][0];
                 mostUsedLetterCount = sortedLetters[0][1];
+                for (const [, count] of sortedLetters) {
+                    if (count > mostUsedLetterCount) {
+                        mostUsedLetterCount = count;
+                    }
+                }
+                const mostUsedLettersArray = sortedLetters.filter(([, freq]) => freq === mostUsedLetterCount);
+                mostUsedLetter = mostUsedLettersArray.map(([char]) => char).join(', ');
             }
 
             let rarestLetter = 'N/A';
             let rarestLetterCount = 'N/A';
             if (sortedLetters.length > 0) {
-                const lowestFreq = sortedLetters[sortedLetters.length - 1][1];
+                const lowestFreq = Math.min(...sortedLetters.map(([, freq]) => freq));
                 const rarestLettersArray = sortedLetters.filter(([, freq]) => freq === lowestFreq);
                 rarestLetter = rarestLettersArray.map(([char]) => char).join(', ');
                 rarestLetterCount = lowestFreq;
@@ -953,14 +1095,15 @@
             let mostCommonSymbols = 'N/A';
             let mostCommonSymbolsCount = 0;
             if (sortedSymbols.length > 0) {
-                mostCommonSymbols = sortedSymbols[0][0];
                 mostCommonSymbolsCount = sortedSymbols[0][1];
+                const mostCommonSymbolsArray = sortedSymbols.filter(([, freq]) => freq === mostCommonSymbolsCount);
+                mostCommonSymbols = mostCommonSymbolsArray.map(([symbol]) => symbol).join(', ');
             }
 
             let uniqueSymbolLowestTime = 'N/A';
             let uniqueSymbolLowestTimeCount = 'N/A';
             if (sortedSymbols.length > 0) {
-                const lowestSymbolFreq = sortedSymbols[sortedSymbols.length - 1][1];
+                const lowestSymbolFreq = Math.min(...sortedSymbols.map(([, freq]) => freq));
                 const lowestSymbolsArray = sortedSymbols.filter(([, freq]) => freq === lowestSymbolFreq);
                 uniqueSymbolLowestTime = lowestSymbolsArray.map(([symbol]) => symbol).join(', ');
                 uniqueSymbolLowestTimeCount = lowestSymbolFreq;
@@ -973,19 +1116,19 @@
             }
             let mostCapitalizedLetter = 'N/A';
             let mostCapitalizedLetterCount = 0;
-            let maxCapitalizedCount = 0;
-            for (const char in capitalizedLetterFrequencies) {
-                if (capitalizedLetterFrequencies[char] > maxCapitalizedCount) {
-                    maxCapitalizedCount = capitalizedLetterFrequencies[char];
-                    mostCapitalizedLetter = char;
-                    mostCapitalizedLetterCount = maxCapitalizedCount;
-                }
+            if (Object.keys(capitalizedLetterFrequencies).length > 0) {
+                maxCapitalizedCount = Math.max(...Object.values(capitalizedLetterFrequencies));
+                const mostCapitalizedLettersArray = Object.entries(capitalizedLetterFrequencies).filter(([, count]) => count === maxCapitalizedCount);
+                mostCapitalizedLetter = mostCapitalizedLettersArray.map(([char]) => char).join(', ');
+                mostCapitalizedLetterCount = maxCapitalizedCount;
             }
 
             const lineCount = text.split('\n').length;
             const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim() !== '');
             const paragraphCount = paragraphs.length;
             const numbersAndCodes = text.match(/\b\d+[a-zA-Z0-9]*\b|\b[a-zA-Z]*\d+\b/g) || [];
+            
+            const uniqueWordsSorted = Object.entries(wordFrequencies).sort((a, b) => a[0].localeCompare(b[0]));
 
             return {
                 wordCount,
@@ -1007,7 +1150,9 @@
                 sortedSymbols,
                 lineCount,
                 paragraphCount,
-                numbersAndCodes
+                numbersAndCodes,
+                sortedUniqueWords: uniqueWordsSorted,
+                wordFrequencies: wordFrequencies
             };
         }
 
@@ -1016,57 +1161,26 @@
 
             html += '<div><h4>General Information</h4>';
             html += `<p><strong>Word Count:</strong> ${results.wordCount}</p>`;
-            html += `<p><strong>Most Repeated Word:</strong> "${results.mostRepeatedWord}" [${results.maxWordCount}]</p>`;
+            html += `<p><strong>Most Repeated Word:</strong> "${results.mostRepeatedWord ? results.mostRepeatedWord : 'N/A'}" [${results.maxWordCount}]</p>`;
             html += `<p><strong>Total Characters (with spaces):</strong> ${results.totalCharactersWithSpace}</p>`;
             html += `<p><strong>Total Characters (without spaces):</strong> ${results.totalCharactersWithoutSpace}</p>`;
             html += `<p><strong>Total Lines:</strong> ${results.lineCount}</p>`;
             html += `<p><strong>Total Paragraphs:</strong> ${results.paragraphCount}</p>`;
             html += '</div>';
 
-            html += '<div><h4>Letter Analysis</h4>';
+            html += '<div><h4 style="display: inline-block; margin-right: 10px;">Letter Analysis</h4><button id="letterSortButton" style="margin-bottom: 10px;">ALP</button>';
             html += `<p><strong>Most Used Letter:</strong> "${results.mostUsedLetter.toUpperCase()}" [${results.mostUsedLetterCount}]</p>`;
             html += `<p><strong>Rarest Letter:</strong> "${results.rarestLetter.toUpperCase()}" [${results.rarestLetterCount}]</p>`;
             html += `<p><strong>Most Capitalized Letter:</strong> "${results.mostCapitalizedLetter}" [${results.mostCapitalizedLetterCount}]</p>`;
-            html += '<p><strong>List of Letters Used:</strong></p>';
+            html += '<p><strong>List of Letters Used: \n\n[ Toggle ALP to View ]</strong></p><div id="letterTableContainer">';
             
             if (results.sortedLetters.length > 0) {
-                html += '<table>';
-                html += '<tr><th>No.</th><th>Letter</th><th>Freq.</th><th style="width:20px;"></th><th>No.</th><th>Letter</th><th>Freq.</th></tr>';
-                
-                const halfLength = Math.ceil(results.sortedLetters.length / 2);
-                
-                for (let i = 0; i < halfLength; i++) {
-                    html += '<tr>';
-                    
-                    const firstItem = results.sortedLetters[i];
-                    if (firstItem) {
-                        html += `<td>${i + 1}.</td>`;
-                        html += `<td>${firstItem[0].toUpperCase()}</td>`;
-                        html += `<td>${firstItem[1]}</td>`;
-                    } else {
-                        html += '<td></td><td></td><td></td>';
-                    }
-                    
-                    html += '<td></td>';
-                    
-                    const secondItem = results.sortedLetters[i + halfLength];
-                    if (secondItem) {
-                        html += `<td>${i + halfLength + 1}.</td>`;
-                        html += `<td>${secondItem[0].toUpperCase()}</td>`;
-                        html += `<td>${secondItem[1]}</td>`;
-                    } else {
-                        html += '<td></td><td></td><td></td>';
-                    }
-                    
-                    html += '</tr>';
-                }
-                
-                html += '</table>';
+                let initialSortedLetters = [...results.sortedLetters].sort((a, b) => a[0].localeCompare(b[0]));
+                updateLetterTable(initialSortedLetters);
             } else {
                 html += `<p>No letters used.</p>`;
             }
-            
-            html += '</div>';
+            html += '</div></div>';
 
             html += '<div><h4>Symbol Analysis</h4>';
             html += `<p><strong>Most Common Symbol:</strong> "${results.mostCommonSymbols}" [${results.mostCommonSymbolsCount}]</p>`;
@@ -1082,6 +1196,16 @@
             html += '</ul>';
             html += '</div>';
 
+            html += '<div><h4 style="display: inline-block; margin-right: 10px;">Word List</h4><button id="wordSortButton" style="margin-bottom: 10px;">ALP</button>';
+            html += '<p><strong>All Unique Words: \n\n[ Toggle ALP ]</strong></p><div id="wordListContainer">';
+            if (results.sortedUniqueWords.length > 0) {
+                let initialSortedWords = [...results.sortedUniqueWords].sort((a, b) => a[0].localeCompare(b[0]));
+                updateWordList(initialSortedWords);
+            } else {
+                html += '<li>No words found</li>';
+            }
+            html += '</div></div>';
+
             html += '<div><h4>Numbers & Codes</h4>';
             html += '<p><strong>Detected Numbers and Codes:</strong></p><ul>';
             if (results.numbersAndCodes.length > 0) {
@@ -1095,6 +1219,8 @@
             html += '</div>';
 
             infoSummary.innerHTML = html;
+            currentLetterSort = 'alpha';
+            currentWordSort = 'alpha';
         }
 
         document.addEventListener('fullscreenchange', () => {
@@ -1118,6 +1244,15 @@
         window.onload = () => {
             applySettings(loadSettings());
             addSettingsListeners();
+            
+            document.addEventListener('click', (e) => {
+                if (e.target && e.target.id === 'letterSortButton') {
+                    updateLetterSort();
+                }
+                if (e.target && e.target.id === 'wordSortButton') {
+                    updateWordSort();
+                }
+            });
         };
     </script>
 </body>
